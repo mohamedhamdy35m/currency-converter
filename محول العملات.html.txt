@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>محول العملات</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      padding: 20px;
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.3);
+      font-size: 2em;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+    .converter {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 25px;
+      border-radius: 15px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    label {
+      margin-bottom: 5px;
+      display: block;
+      font-size: 1.1em;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      color: #333;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 1em;
+      background-color: #00d2ff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00b3e6;
+    }
+    .swap-button {
+      margin: -10px 0 15px;
+      text-align: center;
+    }
+    .swap-button button {
+      background-color: #fff;
+      color: #2c5364;
+      padding: 6px 14px;
+      font-size: 1em;
+    }
+    #result {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+    }
+    footer {
+      text-align: center;
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.2);
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+
+  <header>محول العملات العالمي</header>
+
+  <main>
+    <div class="converter">
+      <label for="amount">المبلغ</label>
+      <input type="number" id="amount" placeholder="أدخل المبلغ" />
+
+      <label for="from">من عملة</label>
+      <select id="from"></select>
+
+      <div class="swap-button">
+        <button type="button" onclick="swapCurrencies()">🔁 عكس العملات</button>
+      </div>
+
+      <label for="to">إلى عملة</label>
+      <select id="to"></select>
+
+      <button onclick="convertCurrency()">تحويل</button>
+
+      <div id="result"></div>
+    </div>
+  </main>
+
+  <footer>
+    جميع الحقوق محفوظة &copy; apo_nada2000
+  </footer>
+
+  <script>
+    const apiKey = 'ab7f3de500b334261785d06e';
+    const fromSelect = document.getElementById('from');
+    const toSelect = document.getElementById('to');
+
+    window.onload = async () => {
+      try {
+        const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/codes`);
+        const data = await res.json();
+        if (data.result === "success") {
+          data.supported_codes.forEach(([code, name]) => {
+            const optionFrom = new Option(`${name} (${code})`, code);
+            const optionTo = new Option(`${name} (${code})`, code);
+            fromSelect.add(optionFrom);
+            toSelect.add(optionTo);
+          });
+          fromSelect.value = "USD";
+          toSelect.value = "EUR";
+        } else {
+          alert("تعذر تحميل العملات.");
+        }
+      } catch (error) {
+        alert("خطأ في الاتصال بالـ API.");
+      }
+    };
+
+    function swapCurrencies() {
+      const temp = fromSelect.value;
+      fromSelect.value = toSelect.value;
+      toSelect.value = temp;
+    }
+
+    async function convertCurrency() {
+      const amount = parseFloat(document.getElementById('amount').value);
+      const from = fromSelect.value;
+      const to = toSelect.value;
+      const resultElement = document.getElementById('result');
+
+      if (isNaN(amount)) {
+        resultElement.innerText = "يرجى إدخال مبلغ صالح.";
+        return;
+      }
+
+      if (from === to) {
+        resultElement.innerText = "العملة المختارة نفسها.";
+        return;
+      }
+
+      resultElement.innerText = "جاري التحويل...";
+
+      try {
+        const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${from}`);
+        const data = await response.json();
+
+        if (data.result === "success") {
+          const rate = data.conversion_rates[to];
+          const convertedAmount = (amount * rate).toFixed(2);
+          const lastUpdate = data.time_last_update_utc;
+
+          resultElement.innerHTML = `
+            <div>${amount} ${from} = <strong>${convertedAmount} ${to}</strong></div>
+            <div>سعر الصرف: 1 ${from} = ${rate} ${to}</div>
+            <div style="font-size: 0.9em; color: #ccc;">تاريخ التحديث: ${lastUpdate}</div>
+          `;
+        } else {
+          resultElement.innerText = "تعذر جلب بيانات التحويل.";
+        }
+      } catch (error) {
+        resultElement.innerText = "فشل في الاتصال بـ API.";
+      }
+    }
+  </script>
+
+</body>
+</html>
